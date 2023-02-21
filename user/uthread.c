@@ -10,15 +10,33 @@
 #define STACK_SIZE  8192
 #define MAX_THREAD  4
 
+struct thread_context{
+    uint64  ra;
+    uint64  sp;
+    uint64  s0;
+    uint64  s1;
+    uint64  s2;
+    uint64  s3;
+    uint64  s4;
+    uint64  s5;
+    uint64  s6;
+    uint64  s7;
+    uint64  s8;
+    uint64  s9;
+    uint64  s10;
+    uint64  s11;
+};
 
 struct thread {
-  char       stack[STACK_SIZE]; /* the thread's stack */
-  int        state;             /* FREE, RUNNING, RUNNABLE */
+  char      stack[STACK_SIZE]; /* the thread's stack */
+  int       state;             /* FREE, RUNNING, RUNNABLE */
+  struct    thread_context thread_context;/*the context of a thread*/
 };
 struct thread all_thread[MAX_THREAD];
 struct thread *current_thread;
-extern void thread_switch(uint64, uint64);
-              
+extern void thread_switch(struct thread_context *old, struct thread_context *new);
+
+
 void 
 thread_init(void)
 {
@@ -62,6 +80,7 @@ thread_schedule(void)
      * Invoke thread_switch to switch from t to next_thread:
      * thread_switch(??, ??);
      */
+    thread_switch(&t->thread_context, &next_thread->thread_context);
   } else
     next_thread = 0;
 }
@@ -69,13 +88,16 @@ thread_schedule(void)
 void 
 thread_create(void (*func)())
 {
-  struct thread *t;
+    struct thread *t;
 
-  for (t = all_thread; t < all_thread + MAX_THREAD; t++) {
-    if (t->state == FREE) break;
-  }
-  t->state = RUNNABLE;
-  // YOUR CODE HERE
+    for (t = all_thread; t < all_thread + MAX_THREAD; t++) {
+        if (t->state == FREE) break;
+    }
+    t->state = RUNNABLE;
+
+    // YOUR CODE HERE
+    t->thread_context.ra = (uint64)func;
+    t->thread_context.sp = (uint64)&(t->stack) +(STACK_SIZE - 1);
 }
 
 void 
@@ -96,7 +118,7 @@ thread_a(void)
   a_started = 1;
   while(b_started == 0 || c_started == 0)
     thread_yield();
-  
+
   for (i = 0; i < 100; i++) {
     printf("thread_a %d\n", i);
     a_n += 1;
